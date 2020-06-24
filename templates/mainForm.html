@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <title> 11 </title>     
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+      <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <style>
+         .bs-example{
+             margin: 20px;        
+         }
+      </style>
+      <script type=text/javascript>
+         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+      </script>
+      <script> 
+         var source = new EventSource("/progress");
+         source.onmessage = function(event) {
+            $('.progress-bar').css('width', event.data+'%').attr('aria-valuenow', event.data);
+            $('.progress-bar-label').text(event.data+'%');
+            //if(event.data == 100){
+            //      source.close()
+            //}
+         }
+      </script>
+
+   <script type=text/javascript>
+      $(function() {
+         $('#populateDB').bind('click', function() {
+            $.getJSON($SCRIPT_ROOT + '/validate', {
+               query_name: $('input[name="query_name"]').val(),
+               }, 
+               function(data) {
+                  if (data.result == 'Bad'){
+                     alert("query_name exist choose a new name");
+                     return false;
+                  } else {
+                     return true;
+                  }
+               }
+            );         
+         });
+      });
+   </script>
+
+   <script type=text/javascript>
+      $(function() {
+         $('a#calculate').bind('click', function() {
+            $.getJSON($SCRIPT_ROOT + '/calc', {
+               a: $('input[name="a"]').val(),
+               b: $('input[name="b"]').val()
+            }, 
+            function(data) {
+               $("#result").text(data.result);
+            }
+         );
+         return false;
+      });
+      });
+   </script>
+
+    </head>  
+   <body>
+      <div>
+         <h1> Jira utilities</h1>
+         <p> populate relevant field and press submit</p>
+       </div>
+       <div class="bs-example">
+               <form class="form-inline" action="http://localhost:5000/hello/" method="POST" role="form" >
+                  <input type="text" class="form-control" name="name" id="name" placeholder="Name" required>
+                  <button type="submit" class="btn btn-outline-primary col-lg-2" value="submit">execute name</button>
+               </form>  
+      </div>
+      <div class="bs-example">
+         <form class="form-inline" action="http://localhost:5000/BRCalc/" method="POST" role="form" >
+            <input type="text" class="form-control" name="jiraKey" id="jiraKey" placeholder="JIRA Key/s" required>
+            <button type="submit" class="btn btn-outline-primary col-lg-2" value="submit">Calc Blast Radius</button>
+         </form>  
+      </div>       
+      <div class="bs-example">
+         <form class="form-inline" action="http://localhost:5000/populateDB/" method="POST" role="form" >
+            <input type="text" class="form-control col-lg-6" name="jql" id="jql" placeholder="jql" required>
+            <input type="text" class="form-control col-lg-2" name="query_name" id="query_name" placeholder="query name" required>
+            <button type="submit" class="btn btn-outline-primary" value="submit" id=populateDB>Populate DB</button>
+         </form>  
+      </div>       
+      <div class="bs-example">
+         <form class="form-inline" action="http://localhost:5000/ticketFieldHistory/" method="POST" role="form" >
+               <input type="text" class="form-control" name="jirakey2" id="jirakey2" placeholder="JIRA Key" required>
+               <input type="text" class="form-control col-lg-3" list="field" name="field" required placeholder="Choose field or enter manually"/>
+               <datalist id="field" name="field" >
+                  <option>status</option>
+                  <option>assignee</option>
+                  <option>Fix Version</option>
+                  <option>Roll out planned date</option>
+               </datalist>
+               
+               <div class="btn-group" role="group" aria-label="Basic example">                  
+                  <button type="button" class="btn btn-outline-primary" disabled><i class="material-icons" style="font-size:16px">flight_takeoff</i></button>
+                  <button type="submit" class="btn btn-outline-primary" value="submit" ></i>Show field history1</button>                                    
+                </div>
+
+         </form>  
+      </div>  
+      
+      <div class="progress" style="width: 50%; margin: 50px;">
+         <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+            <span class="progress-bar-label">0%</span>
+         </div>
+      </div>
+
+      <p><input type=text size=5 name=a> +
+         <input type=text size=5 name=b> =
+         <span id=result>?</span>
+      <p><a href=# id=calculate>calculate server side</a>
+
+         
+      <script type=text/javascript src="{{url_for('static', filename='jquery.js') }}"></script>
+   </body>   
+</html>
+ 

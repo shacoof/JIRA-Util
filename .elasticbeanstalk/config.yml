@@ -1,0 +1,22 @@
+branch-defaults:
+  default:
+    environment: yoramhw
+    group_suffix: null
+environment-defaults:
+  yoramhw:
+    branch: null
+    repository: null
+global:
+  application_name: yoramhw
+  branch: null
+  default_ec2_keyname: null
+  default_platform: Docker
+  default_region: us-west-2
+  include_git_submodules: true
+  instance_profile: null
+  platform_name: null
+  platform_version: null
+  profile: eb-cli
+  repository: null
+  sc: null
+  workspace_type: Application

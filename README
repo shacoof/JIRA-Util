@@ -1,0 +1,26 @@
+# docker rm $(docker ps -a -q -f status=exited)     # remove all containers
+# docker container prune                            # remove all contrainers 
+# docker pull                                       # brings image
+# docker run                                        # craete container from and image and spin it
+#    -d (detach) 
+#    -P (link all ports) 
+#    -p xx:yy (link specific port, from:to) 
+#    --rm (remove after run)
+# docker images                                     # see all images 
+# docker ps                                         # see what's running               
+# docker ps -a                                      # see what ran in the past       
+# docker build -t yourusername/<app name> .         # build docker 
+# docker push yourusername/catnip                   # push the docker image to dockerhub
+# docker stop $(docker ps -a -q)
+
+
+docker build -t shacoof/yhw .
+docker push shacoof/yhw
+# deploy to AWS 
+# from the Porject dir 
+
+docker build yoramhw
+eb init -p docker yoramhw
+eb create yoramhw 
+#http://localhost:5000/hello/xx
+docker run -p 5000:5000 shacoof/yhw
