@@ -1,6 +1,7 @@
 *.log
 *.bck
 static/jquery.js
+__pycache__
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode
