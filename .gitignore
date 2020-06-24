@@ -1,7 +1,7 @@
 *.log
 *.bck
 static/jquery.js
-__pycache__
+__pycache__/*.*
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode
@@ -19,3 +19,4 @@ __pycache__
 .history
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode
+__pycache__/app.cpython-37.pyc
