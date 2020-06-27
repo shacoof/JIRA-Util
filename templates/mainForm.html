@@ -45,78 +45,82 @@
       });
    </script>
 
-   <script type=text/javascript>
-      $(function() {
-         $('a#calculate').bind('click', function() {
-            $.getJSON($SCRIPT_ROOT + '/calc', {
-               a: $('input[name="a"]').val(),
-               b: $('input[name="b"]').val()
-            }, 
-            function(data) {
-               $("#result").text(data.result);
-            }
-         );
-         return false;
-      });
-      });
-   </script>
-
-    </head>  
+       </head>  
    <body>
-      <div>
-         <h1> Jira utilities</h1>
-         <p> populate relevant field and press submit</p>
-       </div>
-       <div class="bs-example">
-               <form class="form-inline" action="http://localhost:5000/hello/" method="POST" role="form" >
-                  <input type="text" class="form-control" name="name" id="name" placeholder="Name" required>
-                  <button type="submit" class="btn btn-outline-primary col-lg-2" value="submit">execute name</button>
-               </form>  
-      </div>
-      <div class="bs-example">
-         <form class="form-inline" action="http://localhost:5000/BRCalc/" method="POST" role="form" >
-            <input type="text" class="form-control" name="jiraKey" id="jiraKey" placeholder="JIRA Key/s" required>
-            <button type="submit" class="btn btn-outline-primary col-lg-2" value="submit">Calc Blast Radius</button>
+      <div class="container 1">
+         <div class="row">
+            <div class="col">
+               <h1> Jira utilities</h1>
+               <p> populate relevant field and press submit</p>
+            </div>
+         </div>
+         <form  action="http://localhost:5000/hello/" method="POST" role="form" >
+            <div class="row justify-content-between">
+               <div class="col-xl">
+                  <input type="text"  name="name" id="name" placeholder="Name" required>
+               </div>
+               <div class="col-xl">
+                  <button type="submit" class="btn-outline-primary" value="submit">execute name</button>
+               </div>
+            </div>
+         </form>           
+         <form action="http://localhost:5000/BRCalc/" method="POST" role="form" >
+            <div class="row justify-content-between">
+               <div class="col-xl"> 
+                  <input type="text"  name="jiraKey" id="jiraKey" placeholder="JIRA Key/s" required>
+               </div>
+               <div class="col-xl">
+                  <button type="submit" class="btn-outline-primary" value="submit">Calc Blast Radius</button>
+               </div>
+            </div>
          </form>  
-      </div>       
-      <div class="bs-example">
-         <form class="form-inline" action="http://localhost:5000/populateDB/" method="POST" role="form" >
-            <input type="text" class="form-control col-lg-6" name="jql" id="jql" placeholder="jql" required>
-            <input type="text" class="form-control col-lg-2" name="query_name" id="query_name" placeholder="query name" required>
-            <button type="submit" class="btn btn-outline-primary" value="submit" id=populateDB>Populate DB</button>
+         <form  action="http://localhost:5000/populateDB/" method="POST" role="form" >
+            <div class="row justify-content-between">
+               <div class="col-xl"> 
+                  <input type="text"  name="jql" id="jql" placeholder="jql" required>
+               </div>
+               <div class="col-xl"> 
+                  <input type="text"  name="query_name" id="query_name" placeholder="query name" required>
+               </div>
+               <div class="col-xl"> 
+                  <button type="submit" class="btn-outline-primary" value="submit" id=populateDB>Populate DB</button>
+               </div>
+            </div>
          </form>  
-      </div>       
-      <div class="bs-example">
-         <form class="form-inline" action="http://localhost:5000/ticketFieldHistory/" method="POST" role="form" >
-               <input type="text" class="form-control" name="jirakey2" id="jirakey2" placeholder="JIRA Key" required>
-               <input type="text" class="form-control col-lg-3" list="field" name="field" required placeholder="Choose field or enter manually"/>
-               <datalist id="field" name="field" >
-                  <option>status</option>
-                  <option>assignee</option>
-                  <option>Fix Version</option>
-                  <option>Roll out planned date</option>
-               </datalist>
-               
-               <div class="btn-group" role="group" aria-label="Basic example">                  
-                  <button type="button" class="btn btn-outline-primary" disabled><i class="material-icons" style="font-size:16px">flight_takeoff</i></button>
-                  <button type="submit" class="btn btn-outline-primary" value="submit" ></i>Show field history1</button>                                    
-                </div>
-
-         </form>  
-      </div>  
-      
-      <div class="progress" style="width: 50%; margin: 50px;">
-         <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
-            <span class="progress-bar-label">0%</span>
+         <form  action="http://localhost:5000/ticketFieldHistory/" method="POST" role="form" >
+            <div class="row justify-content-between">
+               <div class="col-xl"> 
+                  <input type="text"  name="jirakey2" id="jirakey2" placeholder="JIRA Key" required>
+               </div>
+               <div class="col-xl"> 
+                  <input type="text"  list="field" name="field" required placeholder="Choose field or enter manually"/>
+               </div>
+               <div class="col-xl"> 
+                  <datalist id="field" name="field" >
+                     <option>status</option>
+                     <option>assignee</option>
+                     <option>Fix Version</option>
+                     <option>Roll out planned date</option>
+                  </datalist>
+               </div>
+               <div class="col-xl">       
+                  <div class="btn-group" role="group" aria-label="Basic example">                  
+                     <button type="button" class="btn-outline-primary" disabled><i class="material-icons" style="font-size:16px">flight_takeoff</i></button>
+                     <button type="submit" class="btn-outline-primary" value="submit" ></i>Show field history1</button>                                    
+                  </div>
+               </div>
+            </div>
+         </form> 
+         <div class="row justify-content-between">
+            <div class="progress" style="width: 50%; margin: 50px;">
+                  <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                     <div class="col-12">
+                     <span class="progress-bar-label">0%</span>
+                  </div>
+               </div>
+            </div>
          </div>
       </div>
-
-      <p><input type=text size=5 name=a> +
-         <input type=text size=5 name=b> =
-         <span id=result>?</span>
-      <p><a href=# id=calculate>calculate server side</a>
-
-         
       <script type=text/javascript src="{{url_for('static', filename='jquery.js') }}"></script>
    </body>   
 </html>

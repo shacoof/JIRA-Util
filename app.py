@@ -166,8 +166,6 @@ def validate():
    
    return jsonify(result='Bad')
 
-
-
 @app.route("/populateDB/",methods = ['POST'])
 def populateDB():
 
@@ -317,12 +315,6 @@ def ticketFieldHistory():
       debug_print(app.logger,var)
    finally:
       return render_template('issueHistory.html',fields=['field name','from','to','date'], history=historyList)
-
-@app.route('/calc/')
-def calc():
-    a = request.args.get('a', 0, type=int)
-    b = request.args.get('b', 0, type=int)
-    return jsonify(result = a + b)
 
 if __name__ == '__main__':
    app.run(debug = True,host='0.0.0.0')
