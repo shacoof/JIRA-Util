@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
    <head>
-      <title> 11 </title>     
+      <title> 12 </title>     
       <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
@@ -28,7 +28,7 @@
 
    <script type=text/javascript>
       $(function() {
-         $('#populateDB').bind('click', function() {
+         $('#populateQuery').on('click', function() {
             $.getJSON($SCRIPT_ROOT + '/validate', {
                query_name: $('input[name="query_name"]').val(),
                }, 
@@ -45,82 +45,41 @@
       });
    </script>
 
-       </head>  
+   </head>  
    <body>
-      <div class="container 1">
-         <div class="row">
-            <div class="col">
-               <h1> Jira utilities</h1>
-               <p> populate relevant field and press submit</p>
-            </div>
-         </div>
-         <form  action="http://localhost:5000/hello/" method="POST" role="form" >
-            <div class="row justify-content-between">
-               <div class="col-xl">
-                  <input type="text"  name="name" id="name" placeholder="Name" required>
-               </div>
-               <div class="col-xl">
-                  <button type="submit" class="btn-outline-primary" value="submit">execute name</button>
-               </div>
-            </div>
+      
+      <div class="container">
+         <h1> Jira utilities</h1>
+         <p> populate relevant field and press submit</p>
+         <form  action="http://localhost:5000/hello/" method="POST" role="form" class="form-inline" >
+               <input   type="text"    class = "mr-auto p-2" name="name" id="name" placeholder="Name" required>
+               <button  type="submit"  class = "btn-outline-primary p-2 w-25" value="submit">execute name</button>
          </form>           
-         <form action="http://localhost:5000/BRCalc/" method="POST" role="form" >
-            <div class="row justify-content-between">
-               <div class="col-xl"> 
-                  <input type="text"  name="jiraKey" id="jiraKey" placeholder="JIRA Key/s" required>
-               </div>
-               <div class="col-xl">
-                  <button type="submit" class="btn-outline-primary" value="submit">Calc Blast Radius</button>
-               </div>
-            </div>
+         <form action="http://localhost:5000/BRCalc/" method="POST" role="form" class="form-inline">
+                  <input type="text"      class = "mr-auto p-2"    name="jiraKey" id="jiraKey" placeholder="JIRA Key/s" required>
+                  <button type="submit"   class="btn-outline-primary p-2 w-25" value="submit">Calc Blast Radius</button>
          </form>  
-         <form  action="http://localhost:5000/populateDB/" method="POST" role="form" >
-            <div class="row justify-content-between">
-               <div class="col-xl"> 
-                  <input type="text"  name="jql" id="jql" placeholder="jql" required>
-               </div>
-               <div class="col-xl"> 
-                  <input type="text"  name="query_name" id="query_name" placeholder="query name" required>
-               </div>
-               <div class="col-xl"> 
-                  <button type="submit" class="btn-outline-primary" value="submit" id=populateDB>Populate DB</button>
-               </div>
-            </div>
+         <form  action="http://localhost:5000/populateQuery/" method="POST" role="form" class="form-inline" >
+                  <input type="text"    class = "p-2" name="query_name" id="query_name" placeholder="query name" required>
+                  <input type="text"  class = "p-2 w-50" name="jql" id="jql" placeholder="jql" required>
+                  <button type="submit" class="btn-outline-primary ml-auto p-2 w-25" value="submit" id=populateQuery>populate Query</button>
          </form>  
-         <form  action="http://localhost:5000/ticketFieldHistory/" method="POST" role="form" >
-            <div class="row justify-content-between">
-               <div class="col-xl"> 
-                  <input type="text"  name="jirakey2" id="jirakey2" placeholder="JIRA Key" required>
-               </div>
-               <div class="col-xl"> 
-                  <input type="text"  list="field" name="field" required placeholder="Choose field or enter manually"/>
-               </div>
-               <div class="col-xl"> 
-                  <datalist id="field" name="field" >
-                     <option>status</option>
-                     <option>assignee</option>
-                     <option>Fix Version</option>
-                     <option>Roll out planned date</option>
-                  </datalist>
-               </div>
-               <div class="col-xl">       
-                  <div class="btn-group" role="group" aria-label="Basic example">                  
-                     <button type="button" class="btn-outline-primary" disabled><i class="material-icons" style="font-size:16px">flight_takeoff</i></button>
-                     <button type="submit" class="btn-outline-primary" value="submit" ></i>Show field history1</button>                                    
-                  </div>
-               </div>
-            </div>
+         <form  action="http://localhost:5000/ticketFieldHistory/" method="POST" role="form" class="form-inline" >
+            <input type="text"   class = "p-2"  name="jirakey2" id="jirakey2" placeholder="JIRA Key" required>
+            <input type="text"   class = "p-2"  list="field" name="field" required placeholder="Choose field or enter manually"/>
+            <datalist id="field" class = "p-2" name="field" >
+               <option>status</option>
+               <option>assignee</option>
+               <option>Fix Version</option>
+               <option>Roll out planned date</option>
+            </datalist>
+            <button type="submit" class="btn-outline-primary ml-auto p-2 w-25" value="submit" >Show field history1</button>                                    
          </form> 
-         <div class="row justify-content-between">
-            <div class="progress" style="width: 50%; margin: 50px;">
-                  <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
-                     <div class="col-12">
-                     <span class="progress-bar-label">0%</span>
-                  </div>
+            <div class="progress" style="margin-top: 50px;">
+               <div class="progress-bar progress-bar-striped W-100 active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                  <span class="progress-bar-label">0%</span>
                </div>
             </div>
-         </div>
-      </div>
       <script type=text/javascript src="{{url_for('static', filename='jquery.js') }}"></script>
    </body>   
 </html>

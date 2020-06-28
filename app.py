@@ -54,8 +54,9 @@ def find_dependencies(issue_list,dependent_list):
       return
 
 def get_linked_issues_by_filter (issue_list,filter_by,name):
-   # input : list of issues, link_anme 
+   # input : list of issues, link_name 
    # output : list of links of type link_name
+   # uses get_issue_links to find the links, this is a wrapper to traverse all the issues in the list 
 
    debug_print(app.logger,"FilterBy= "+filter_by + " Filter = "+name)
    result = []
@@ -68,7 +69,7 @@ def get_linked_issues_by_filter (issue_list,filter_by,name):
    return result
 
 def get_issue_links(issue,filter_by, name):
-   # input : list of issues, link_anme 
+   # input : issue, link_name 
    # output : list of links of type link_name
    global issue_db
    result = []
@@ -161,13 +162,13 @@ def validate():
       cur.execute("SELECT * FROM "+ query_name)
       rows = cur.fetchall()
    except Error as e:
-      debug_print(app.logger,e)
+      debug_print(app.logger,str(e))
       return jsonify(result='Good')
    
    return jsonify(result='Bad')
 
-@app.route("/populateDB/",methods = ['POST'])
-def populateDB():
+@app.route("/populateQuery/",methods = ['POST'])
+def populateQuery():
 
    # Open DB
    # run a JQL
@@ -189,41 +190,91 @@ def populateDB():
    full_db_name = os.path.join(app.root_path, 'JIRA-DB.db')
    conn = create_connection(full_db_name)
 
-   #ActionItem add a check if the table exists and if so ask the user whether he wants to delete it 
-
-   sql_create_tbl = """CREATE TABLE IF NOT EXISTS """+ query_name +""" (
-                                    key text PRIMARY KEY,
-                                    project text ,
-                                    issue_type text ,
-                                    created text
-                                );"""
-
-
-
    if conn is None:
         debug_print(app.logger, "Error! cannot create the database connection.")
         return ("Error! cannot create the database connection.")
 
+   issues_table_name = query_name.strip()+"_ISSUES"
+   links_table_name = query_name.strip()+"_LINKS"
+   transitions_table_name = query_name.strip()+"_TRANSITIONS"
+
+   issues_create_string = """  (KEY	TEXT,
+                              PROJECT	TEXT,
+                              CREATED	TEXT,
+                              TYPE	TEXT
+                           );"""
+
+   Links_create_string =  """ (SOURCE_KEY	TEXT,
+                              TARGET_KEY	TEXT,
+                              LINK_TYPE	TEXT,
+                              CREATED	TEXT
+                           );"""
+
+   transitions_create_string = """ (KEY	TEXT,
+                                 STATUS	TEXT,
+                                 CREATED	TEXT,
+                                 TIME_IN_STATUS	INTEGER
+                           );"""
+
+
+   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ issues_table_name +issues_create_string
    create_table(conn,sql_create_tbl)
+   debug_print(app.logger,"Issues table created")
+
+   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ links_table_name +Links_create_string
+   create_table(conn,sql_create_tbl)
+   debug_print(app.logger,"Link table created")
+
+   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ transitions_table_name +transitions_create_string
+   create_table(conn,sql_create_tbl)
+   debug_print(app.logger,"Transitions table created")
+
    progress_made = "20"   
-   
+   statusList=[]
+   issueList=[]
+   linkList=[]
    fields='key,project,issuetype,created'   
    maxResults=100
    startAt = 0 
-   url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&fields="+fields
+   url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&expand=changelog"
+   debug_print(app.logger, "URL="+url)
    result=execute_JIRA_RestAPI(url)
-   issueList = [(i.key, i.fields.project.name, i.fields.issuetype.name, i.fields.created[0:10]) for i in result.issues]   
+   
+   for issue in result.issues:
+      # get all issues 
+      issueList += [(issue.key, issue.fields.project.name, issue.fields.issuetype.name, issue.fields.created[0:10])]
+      # for each issue get all its history / change log
+      for history in issue.changelog.histories:
+         for item in history.items:
+            if (item.field == 'status'):
+               statusList += [(issue.key, item.fromString, history.created,0)]
+      # gor each issue get all it's "is blocked by" liks 
+      linkList += get_issue_links(issue,"is blocked by","LinkType")
+
+
+   # bring the next page of issues 
    while startAt+maxResults < result.total:
       startAt += maxResults
       progress_made = str(20+round((startAt/result.total)*80))   
-      url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&fields="+fields
+      url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&expand=changelog"
       result=execute_JIRA_RestAPI(url)
-      issueList += [(i.key, i.fields.project.name, i.fields.issuetype.name, i.fields.created[0:10]) for i in result.issues]
+      for issue in result.issues:
+         # get all issues 
+         issueList += [(issue.key, issue.fields.project.name, issue.fields.issuetype.name, issue.fields.created[0:10])]
+         # for each issue get all its history / change log
+         for history in issue.changelog.histories:
+            for item in history.items:
+               if (item.field == 'status'):
+                  statusList += [(issue.key, item.fromString, history.created,0)]
+         # gor each issue get all it's "is blocked by" liks 
+         linkList += get_linked_issues_by_filter(issue,"is blocked by","LinkType")
+
 
    try:
       c = conn.cursor()
       #c.execute ('Delete from JIRA_QUERY')
-      c.executemany ('INSERT INTO '+query_name+' VALUES (?,?,?,?)', issueList)
+      c.executemany ('INSERT INTO '+issues_table_name+' VALUES (?,?,?,?)', issueList)
+      c.executemany ('INSERT INTO '+transitions_table_name+' VALUES (?,?,?,?)', statusList)
       conn.commit()
       conn.close()
       debug_print (app.logger,'issues created successfully')
