@@ -202,6 +202,7 @@ def populateQuery():
    issues_table_name = query_name.strip()+"_ISSUES"
    links_table_name = query_name.strip()+"_LINKS"
    histories_table_name = query_name.strip()+"_HISTORY"
+   jql_queries_name = "JQL_QUERIES"
 
    issues_create_string = """  (KEY	TEXT,
                               PROJECT	TEXT,
@@ -224,6 +225,11 @@ def populateQuery():
                                  HOURS_IN_STATUS	INTEGER
                            );"""
 
+   jql_queries_create_string  = """   (
+	                                    Name	TEXT,
+	                                    JQL	TEXT
+                                       ); """
+
    sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ issues_table_name +issues_create_string
    create_table(conn,sql_create_tbl)
    debug_print(app.logger,"Issues table created")
@@ -236,11 +242,15 @@ def populateQuery():
    create_table(conn,sql_create_tbl)
    debug_print(app.logger,"histories table created")
 
+   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ jql_queries_name +jql_queries_create_string
+   create_table(conn,sql_create_tbl)
+   debug_print(app.logger,"jql queries table created")
+
    progress_made = "20"   
    historyList=[]
    issueList=[]
    linkList=[]
-   fields='key,project,issuetype,created'   
+   fields='key,project,issuetype,created,issuelinks'   
     
    # Implementing do until loop : do until we reached the end of data 
    # see https://stackoverflow.com/questions/743164/emulate-a-do-while-loop-in-python
@@ -248,7 +258,7 @@ def populateQuery():
    startAt = 0 
    while True: 
       # query next page 
-      url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&expand=changelog"
+      url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&expand=changelog&fields="+fields
       debug_print(app.logger, "URL="+url)
       result=execute_JIRA_RestAPI(url)
       # process records 
@@ -290,9 +300,10 @@ def populateQuery():
    try:
       c = conn.cursor()
       #c.execute ('Delete from JIRA_QUERY')
-      c.executemany ('INSERT INTO '+issues_table_name+' VALUES (?,?,?,?)', issueList)
-      c.executemany ('INSERT INTO '+histories_table_name+' VALUES (?,?,?,?,?,?)', historyList)
-      c.executemany ('INSERT INTO '+links_table_name+' VALUES (?,?,?,?)', linkList)
+      c.execute      ('INSERT INTO JQL_QUERIES               VALUES(?,?)'         ,[query_name,jql])
+      c.executemany  ('INSERT INTO '+issues_table_name+'     VALUES (?,?,?,?)'    ,issueList)
+      c.executemany  ('INSERT INTO '+histories_table_name+'  VALUES (?,?,?,?,?,?)',historyList)
+      c.executemany  ('INSERT INTO '+links_table_name+'      VALUES (?,?,?,?)'    ,linkList)
       conn.commit()
       conn.close()
       debug_print (app.logger,'issues created successfully')
