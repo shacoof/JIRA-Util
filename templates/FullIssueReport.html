@@ -14,24 +14,27 @@
     </head>  
    <body>
     <form><input type="button" value="Go back!" onclick="history.back()"></form>'
+        <h1> Issues </h1>
         <table class="table table-striped">
         <thead>
             <tr>
-                <th>key</th>
-                <th>issue type</th>
-                <th>status</th>
+                {% for f in issue_fields %}            
+                <th>{{ f }}</th>
+                {% endfor %}
+
             <tr>
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr>
-                <td>{{ issue.key }}</td>
-                <td>{{ issue.type }}</td>
-                <td>{{ issue.status }}</td>
-            </tr>
+                <tr>
+                {% for elem in issue %}
+                    <td>{{elem}}</td>
+                {% endfor %}
+                </tr>
             {% endfor %}
         </tbody>
     </table>
+    <h1> Links </h1>
     <table class="table table-striped">
         <thead>
             <tr>    
@@ -41,17 +44,16 @@
             <tr>
         </thead>
         <tbody>
-            {% for h in links %}
-            <tr>
-                <td>{{ h.field }}</td>
-                <td>{{ h.from }}</td>
-                <td>{{ h.to }}</td>
-                <td>{{ h.date }}</td>
-            </tr>
+            {% for link in links %}
+                <tr>
+                {% for elem in link %}
+                    <td>{{elem}}</td>
+                {% endfor %}
+                </tr>
             {% endfor %}
         </tbody>
     </table>
-
+    <h1> History </h1>
     <table class="table table-striped">
         <thead>
             <tr>    
@@ -61,13 +63,12 @@
             <tr>
         </thead>
         <tbody>
-            {% for h in history %}
-            <tr>
-                <td>{{ h.field }}</td>
-                <td>{{ h.from }}</td>
-                <td>{{ h.to }}</td>
-                <td>{{ h.date }}</td>
-            </tr>
+            {% for history in histories %}
+                <tr>
+                {% for elem in history %}
+                    <td>{{elem}}</td>
+                {% endfor %}
+                </tr>
             {% endfor %}
         </tbody>
     </table>

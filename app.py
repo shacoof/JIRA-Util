@@ -69,7 +69,12 @@ def get_linked_issues_by_filter (issue_list,filter_by,name):
    return result
 
 def get_issue_links(issue,filter_by, name):
-   # input : issue, link_name 
+   """
+    issue: issue object 
+    filter_by: [linkType, issueType]
+    name: name of link, e.g. "is blocked by"
+   """
+   #  input : issue, link_name 
    # output : list of links of type link_name
    global issue_db
    result = []
@@ -196,7 +201,7 @@ def populateQuery():
 
    issues_table_name = query_name.strip()+"_ISSUES"
    links_table_name = query_name.strip()+"_LINKS"
-   transitions_table_name = query_name.strip()+"_TRANSITIONS"
+   histories_table_name = query_name.strip()+"_HISTORY"
 
    issues_create_string = """  (KEY	TEXT,
                               PROJECT	TEXT,
@@ -210,12 +215,14 @@ def populateQuery():
                               CREATED	TEXT
                            );"""
 
-   transitions_create_string = """ (KEY	TEXT,
-                                 STATUS	TEXT,
+   histories_create_string = """ (
+                                 KEY	TEXT,
+                                 CHANGED_FIELD TEXT,
+                                 FROM_STATUS	TEXT,
+                                 TO_STATUS TEXT,
                                  CREATED	TEXT,
-                                 TIME_IN_STATUS	INTEGER
+                                 HOURS_IN_STATUS	INTEGER
                            );"""
-
 
    sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ issues_table_name +issues_create_string
    create_table(conn,sql_create_tbl)
@@ -225,63 +232,84 @@ def populateQuery():
    create_table(conn,sql_create_tbl)
    debug_print(app.logger,"Link table created")
 
-   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ transitions_table_name +transitions_create_string
+   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ histories_table_name +histories_create_string
    create_table(conn,sql_create_tbl)
-   debug_print(app.logger,"Transitions table created")
+   debug_print(app.logger,"histories table created")
 
    progress_made = "20"   
-   statusList=[]
+   historyList=[]
    issueList=[]
    linkList=[]
    fields='key,project,issuetype,created'   
+    
+   # Implementing do until loop : do until we reached the end of data 
+   # see https://stackoverflow.com/questions/743164/emulate-a-do-while-loop-in-python
    maxResults=100
    startAt = 0 
-   url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&expand=changelog"
-   debug_print(app.logger, "URL="+url)
-   result=execute_JIRA_RestAPI(url)
-   
-   for issue in result.issues:
-      # get all issues 
-      issueList += [(issue.key, issue.fields.project.name, issue.fields.issuetype.name, issue.fields.created[0:10])]
-      # for each issue get all its history / change log
-      for history in issue.changelog.histories:
-         for item in history.items:
-            if (item.field == 'status'):
-               statusList += [(issue.key, item.fromString, history.created,0)]
-      # gor each issue get all it's "is blocked by" liks 
-      linkList += get_issue_links(issue,"is blocked by","LinkType")
-
-
-   # bring the next page of issues 
-   while startAt+maxResults < result.total:
-      startAt += maxResults
-      progress_made = str(20+round((startAt/result.total)*80))   
+   while True: 
+      # query next page 
       url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&expand=changelog"
+      debug_print(app.logger, "URL="+url)
       result=execute_JIRA_RestAPI(url)
+      # process records 
       for issue in result.issues:
          # get all issues 
          issueList += [(issue.key, issue.fields.project.name, issue.fields.issuetype.name, issue.fields.created[0:10])]
          # for each issue get all its history / change log
+
+         first_status_change = True
+         
          for history in issue.changelog.histories:
             for item in history.items:
                if (item.field == 'status'):
-                  statusList += [(issue.key, item.fromString, history.created,0)]
-         # gor each issue get all it's "is blocked by" liks 
-         linkList += get_linked_issues_by_filter(issue,"is blocked by","LinkType")
+                  if first_status_change:
+                     historyList += [(issue.key,'status', item.fromString, item.toString, history.created,0)]
+                     start_status_datetime = datetime.strptime(history.created[0:10]+history.created[11:16],"%Y-%m-%d%H:%M")
+                     first_status_change = False
+                  else:
+                     end_status_datetime = datetime.strptime(history.created[0:10]+history.created[11:16],"%Y-%m-%d%H:%M")
+                     delta = (end_status_datetime - start_status_datetime).total_seconds()/3600 # hours
+                     start_status_datetime = end_status_datetime
+                     historyList += [(issue.key,'status', item.fromString, item.toString, history.created,round(delta))]
 
 
+               elif (item.field == 'Link' and (str(item.toString).find("is blocked by")>0 or str(item.fromString).find("is blocked by")>0) ):
+                  historyList += [(issue.key,'link', item.fromString, item.toString, history.created,0)]
+         # for each issue get all it's "is blocked by" liks 
+         linkList += [[issue.key,i,"is blocked by",0] for i in get_issue_links(issue,"linkType","is blocked by")]
+         #ActionItem calculate time in each state
+         #ActionItem in order to calculate time in block state look at the history to know when the link was added 
+      
+      progress_made = str(20+round((startAt/(result.total+1)*80)))   # +1 incase 0
+      # calculating next page starting point, if it's bigger then total results we are done, implementing do-unitl loop 
+      # see https://stackoverflow.com/questions/743164/emulate-a-do-while-loop-in-python
+      startAt += maxResults
+      if startAt > result.total:
+         break
+      # if there is another page then it will be retrivied at the toop of the loop 
    try:
       c = conn.cursor()
       #c.execute ('Delete from JIRA_QUERY')
       c.executemany ('INSERT INTO '+issues_table_name+' VALUES (?,?,?,?)', issueList)
-      c.executemany ('INSERT INTO '+transitions_table_name+' VALUES (?,?,?,?)', statusList)
+      c.executemany ('INSERT INTO '+histories_table_name+' VALUES (?,?,?,?,?,?)', historyList)
+      c.executemany ('INSERT INTO '+links_table_name+' VALUES (?,?,?,?)', linkList)
       conn.commit()
       conn.close()
       debug_print (app.logger,'issues created successfully')
    except Error as e:
-      debug_print(app.logger, str(e))
+      var = traceback.format_exc()
+      debug_print(app.logger, var)
+      return (var)
 
-   return "db populated successfully !!"
+   return render_template("FullIssueReport.html",
+         issue_fields   = ['Key','Product','Issue Type','Created'],
+         issues         = issueList,
+         link_fields    = ['Source Key','Target Key', 'Link Type', 'Created'],
+         links          = linkList,
+         history_fields = ['Key','Field','From value','To value', 'Date','Time in Status (Sec)'],
+         histories      = historyList
+
+         )
 
 @app.route('/BRCalc/',methods = ['POST'])
 def BRCalc():
