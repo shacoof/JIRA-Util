@@ -70,10 +70,10 @@
             <button type="submit" class="btn-outline-primary ml-auto p-2 w-25" value="submit" id=queryMySQL>MySQL Query</button>
          </form>  
          <form  action="http://localhost:5000/timeInStatus/" method="POST" role="form" class="form-inline" >
-            <input type="text"  class = "p-2 " name="Project_Key" id="Project_Key" placeholder="Project Key" required>
-            <input type="text"  class = "p-2 " name="From_date" id="From_date" placeholder="From Date DD-MM-YYYY" required>
-            <input type="text"  class = "p-2 " name="Issue_types" id="Issue_types" placeholder="Issue types Defect, Customer Defect etc." required>
-            <button type="submit" class="btn-outline-primary ml-auto p-2 w-25" value="submit" id=timeInStatus>MySQL Query</button>
+            <input type="text"  class = "p-2 " name="project_key" id="project_key" placeholder="ALL or Project Key" required>
+            <input type="text"  class = "p-2 " name="from_date" id="from_date" placeholder="From Date yyyy-mm-dd" required>
+            <input type="text"  class = "p-2 " name="issue_types" id="issue_types" placeholder="Issue types Defect, Customer Defect etc." required>
+            <button type="submit" class="btn-outline-primary ml-auto p-2 w-25" value="submit">Time In Status</button>
          </form>  
          <form  action="http://localhost:5000/ticketFieldHistory/" method="POST" role="form" class="form-inline" >
             <input type="text"   class = "p-2"  name="jirakey2" id="jirakey2" placeholder="JIRA Key" required>
