@@ -13,6 +13,7 @@ from shacoof.SQLiteUtil import create_connection, create_table
 import logging
 import sqlite3
 from sqlite3 import Error
+import mysql.connector
 
 server="https://jira.devfactory.com/rest/api/latest/"
 htmlbr = '<br>'
@@ -105,7 +106,8 @@ def execute_JIRA_RestAPI(url):
    # return : object (from JIRA response)
    debug_print (app.logger,'start jira query'+ datetime.now().ctime() )
    # Base encode email and api token
-   cred =  "Basic " + base64.b64encode(b'scohenofir:JennyXO123!').decode("utf-8") 
+   cred =  "Basic " + base64.b64encode(b'scohenofir:TTiger999!').decode("utf-8") 
+   print(cred)
    # Set header parameters
    headers = {
       "Accept": "application/json",
@@ -137,7 +139,6 @@ def progress():
    val =  "data:" + str(progress_made) + "\n\n"
    #debug_print(app.logger,">>>>>>>> In progress "+val)
    return Response(val, mimetype= 'text/event-stream')
-
 
 @app.route('/mainForm/')
 def mainForm():
@@ -381,6 +382,37 @@ def BRCalc():
       tbl_to_print = [ item for item in issue_db if item["key"] in blast_radius]
       return render_template('issueTable.html',issues=tbl_to_print)  
 
+@app.route('/queryMySQL/',methods = ['POST'])
+def queryMySQL():
+   mydb = mysql.connector.connect(
+   host="aurora5.aureacentral.com",
+   user="scohenofir",
+   password="3lJxymu26CRx8",
+   database='jira'
+   )
+
+   print(mydb)
+   mycursor = mydb.cursor()
+   #mycursor.execute("select pname from project")
+   mycursor.execute(
+   """select concat(project.pkey,'-', jiraissue.issuenum),
+		changeitem.OLDSTRING OldStatus, 
+      changeitem.NEWSTRING NewStatus, 
+      changegroup.CREATED Executed
+      from changeitem 
+      inner join changegroup  on changeitem.groupid = changegroup.id
+      inner join jiraissue  on jiraissue.id = changegroup.issueid
+      inner join project on project.id = jiraissue.project
+      where changeitem.field ='status'
+      and project.pkey = 'SLIFRONT'
+   """)
+   myresult = mycursor.fetchall()
+   c = 0 
+   for x in myresult:
+      c+=1
+      print(x)
+      print (c)
+
 @app.route('/ticketFieldHistory/',methods = ['POST'])
 def ticketFieldHistory():
    try:
@@ -403,8 +435,115 @@ def ticketFieldHistory():
       var = traceback.format_exc()
       debug_print(app.logger,'================ Error ================>')
       debug_print(app.logger,var)
-   finally:
+   finally: 
       return render_template('issueHistory.html',fields=['field name','from','to','date'], history=historyList)
+
+
+# Add all tickets of type Based on project-key and from-date
+@app.route("/timeInStatus/",methods = ['POST'])
+def timeInStatus():
+
+   debug_print(app.logger,"=============> timeInStatus   <================")
+   global progress_made      
+   progress_made = "0"   
+   #get user parameters 
+   try:
+      project_key = request.form['project_key'].upper()
+      from_date = request.form['from_date']
+      Issue_types = request.form['Issue_types']
+      debug_print(app.logger,"project_key"+project_key)
+      debug_print(app.logger,"from_date"+from_date)
+      debug_print(app.logger,"Issue_types"+Issue_types) #ActionItem : split using "," and build SQL dynamically in case of multiple values
+   except Error as e:
+      debug_print(app.logger,e)
+      return "problem with parameters, expecting both jql and query_name"
+
+   progress_made = "10"   
+
+   #Create SQLLite connect and table if need to 
+   full_db_name = os.path.join(app.root_path, 'JIRA-DB.db')
+   sqlLiteConn = create_connection(full_db_name)
+
+   if sqlLiteConn is None:
+        debug_print(app.logger, "Error! cannot create the database connection.")
+        return ("Error! cannot create the database connection.")
+
+   time_in_status_table_name = "TIME_IN_STATUS"
+
+   time_in_status_create_string = """  (PROJECT	TEXT,
+                                        ISSUE_TYPE	TEXT,
+                                        KEY	TEXT,
+                                        FROM_STATUS	TEXT,
+                                        TO_STATUS	TEXT,
+                                        CREATED TEXT
+                                    );"""
+
+   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ time_in_status_table_name +time_in_status_create_string
+   create_table(sqlLiteConn,sql_create_tbl)
+   debug_print(app.logger,"Time in status table created")
+
+   progress_made = "20"   
+
+   sqlLiteCursor = sqlLiteConn.cursor()
+   #delete old history for this project 
+   try:
+      sqlLiteCursor.execute ('Delete from '+time_in_status_table_name+' where project = '+project_key)
+      debug_print (app.logger,'Old issues deleted successfully')
+   except Error as e:
+      var = traceback.format_exc()
+      debug_print(app.logger, var)
+      return (var)
+
+   progress_made = "30"   
+
+   # Open MySql and execute query
+   mydb = mysql.connector.connect(
+   host="aurora5.aureacentral.com",
+   user="scohenofir",
+   password="3lJxymu26CRx8",
+   database='jira'
+   )
+
+   print(mydb)
+   mycursor = mydb.cursor()
+   #mycursor.execute("select pname from project")
+   query_string = """select  project.pname,
+         issuetype.pname,
+         concat(project.pkey,'-', jiraissue.issuenum),
+         changeitem.OLDSTRING OldStatus, 
+         changeitem.NEWSTRING NewStatus, 
+         changegroup.CREATED Executed
+         from changeitem 
+         inner join changegroup  on changeitem.groupid = changegroup.id
+         inner join jiraissue  on jiraissue.id = changegroup.issueid
+         inner join project on project.id = jiraissue.project
+         inner join issuetype  ON issuetype.id = jiraissue.issuetype
+         where changeitem.field ='status'
+         and ( issuetype.pname = 'Defect' or issuetype.pname = 'Customer Defect' )
+         and jiraissue.CREATED > """ + from_date + """
+         and project.pname = """ + project_key + """
+         Order by project.pkey, jiraissue.issuenum, changegroup.CREATED
+      """
+
+   try:
+      mycursor.execute(query_string)
+      records = mycursor.fetchall()
+      # [0] project
+      # [1] issue type
+      # [2] key
+      # [3] from status
+      # [4] to status
+      # [5] created
+      sqlLiteCursor.executemany  ('INSERT INTO '+time_in_status_table_name+' VALUES (?,?,?,?,?,?)'    ,records)
+      sqlLiteConn.commit()
+      sqlLiteConn.close()
+      debug_print (app.logger,len(records)+' issues created successfully')
+   except Error as e:
+      var = traceback.format_exc()
+      debug_print(app.logger, var)
+      return (var)
+
+   return 'Done'
 
 if __name__ == '__main__':
    app.run(debug = True,host='0.0.0.0')
