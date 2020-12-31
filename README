@@ -1,3 +1,7 @@
+# How to run
+# f5 (run) from app.py
+# in the browser go to http://127.0.0.1:5000/mainForm/
+
 # docker rm $(docker ps -a -q -f status=exited)     # remove all containers
 # docker container prune                            # remove all contrainers 
 # docker pull                                       # brings image

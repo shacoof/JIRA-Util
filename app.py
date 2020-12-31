@@ -8,7 +8,7 @@ import sys
 import os
 import time
 from datetime import datetime
-from shacoof.misc_utils import to_object, debug_print
+from shacoof.misc_utils import to_object, debug_print, createCSV
 from shacoof.SQLiteUtil import create_connection, create_table
 import logging
 import sqlite3
@@ -21,6 +21,42 @@ htmlbr = '<br>'
 issue_db = []
 progress_made = "0"
 JIRA_DB = 'JIRA-DB.db'
+
+
+def retrieveFields(obj, fields): 
+  f = fields.split(",");
+  ret = [];
+  for i in range(len(f)):
+    try:
+      if f[i] == "issuetype" :
+        ret.append(obj.fields.issuetype.name)
+      elif f[i] == "key":
+        ret.append(obj.key)
+      elif f[i] == "project":
+        ret.append(obj.fields.project.name)
+      elif f[i] == "status":
+        ret.append(obj.fields.status.name)
+      elif f[i] == "customfield_23602": # engineering vp
+        ret.append(obj.fields["customfield_23602"].value.emailAddress)
+      elif f[i] == "customfield_16405":  #engineering vp
+        ret.append(obj.fields["customfield_16405"].value.emailAddress)
+      elif f[i] == "customfield_16403": # Product CA
+        ret.append(obj.fields["customfield_16403"].value.displayName)
+      elif f[i] == "customfield_51006": #FunctionalPCA 
+        ret.append(obj.fields["customfield_51006"].value.displayName)
+      elif f[i] == "assignee":
+        ret.append(obj.fields.assignee.displayName)
+      elif f[i] == 'customfield_58100' : #distanceToRelease
+         ret.append(obj.fields.customfield_58100)
+      elif f[i] == 'customfield_60501' : #E2Es to complete BR
+         ret.append(obj.fields.customfield_60501)
+      else :
+        ret.append(obj.fields[f[i]])
+    except Error as e:
+      debug_print(app.logger,e)
+      ret += "no value"
+
+  return ret
 
 # recursion to find dependency tree 
 # issue_list : list of JIRA keys 
@@ -106,7 +142,11 @@ def execute_JIRA_RestAPI(url):
    # return : object (from JIRA response)
    debug_print (app.logger,'start jira query'+ datetime.now().ctime() )
    # Base encode email and api token
-   cred =  "Basic " + base64.b64encode(b'scohenofir:TTiger999!').decode("utf-8") 
+   #cred =  "Basic " + base64.b64encode(b'scohenofir:TigerXO123!').decode("utf-8") 
+   cred =  "Basic " +'c2NvaGVub2ZpcjpUaWdlclhPMTIzIQ=='
+   # used a service to convert string to base64 string is scohenofir:pwd
+
+
    print(cred)
    # Set header parameters
    headers = {
@@ -129,8 +169,11 @@ def execute_JIRA_RestAPI(url):
    debug_print (app.logger,'end jira query'+ datetime.now().ctime())
    return obj
 
+
+
+logging.basicConfig(filename='app.log', level=logging.DEBUG,filemode='w')
+logging.getLogger("myLogger")
 app = Flask(__name__)
-logging.basicConfig(filename='app.log', level=logging.DEBUG)
 debug_print(app.logger,"Good morning sharon")
 
 @app.route('/progress')
@@ -172,6 +215,130 @@ def validate():
       return jsonify(result='Good')
    
    return jsonify(result='Bad')
+
+
+@app.route("/backlogStat/",methods = ['POST'])
+def backlogStat():
+   global progress_made      
+   progress_made = "0"   
+   #get user parameters 
+   try:
+      query_name = request.form['query_name'].upper()
+   except Error as e:
+      debug_print(app.logger,e)
+      return "problem with parameters, expecting  jql, fields and query_name"
+
+   progress_made = "1"   
+   # customfield_58100 DTR 
+   # customfield_60501 E2Es to complete BR
+   fields = 'key,project,issuetype,status,customfield_58100,customfield_60501'
+   issueList = [['filter']+fields.split(',')] # setting the head row
+   maxResults=1000
+   jqls = [['WaitingCR','filter=141400'],['WaitingQaEnv','filter=141401'],['WaitingBR','filter=141406'],['preALP','filter=140006']]
+   complete=0 #used to advance the bar
+   for jql in jqls:      
+      startAt = 0       
+      while True: 
+         # query next page 
+         url = server + "search?jql="+ jql[1] +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&fields="+fields
+         debug_print(app.logger, "URL="+url)
+         result=execute_JIRA_RestAPI(url)
+         # process records 
+         for issue in result.issues:
+            # get all issues 
+            issueList += [([jql[0]]+retrieveFields(issue,fields))]
+         
+         progress_made = str(complete+round((startAt/(result.total+1)*(100/len(jqls)))))   # +1 incase 0
+         startAt += maxResults
+         if startAt > result.total:
+            break
+      complete +=24;
+          
+
+   createCSV(query_name,issueList)
+   progress_made = '100'
+
+   return render_template("message.html",message=str(result.total) + " issues retrieved successfully")
+
+
+@app.route("/populateQueryByFields/",methods = ['POST'])
+def populateQueryByFields():
+
+   # Open DB
+   # run a JQL
+   # go through pages and upload records to DB
+   # each query will create it's own table, if table exists it ask the user whether to delete the content 
+
+   global progress_made      
+   progress_made = "0"   
+   #get user parameters 
+   try:
+      jql = request.form['jql']
+      fields = request.form['fields'] #'key,project,issuetype,created'
+      query_name = request.form['query_name'].upper()
+   except Error as e:
+      debug_print(app.logger,e)
+      return "problem with parameters, expecting  jql, fields and query_name"
+
+   progress_made = "1"   
+
+   full_db_name = os.path.join(app.root_path, 'JIRA-DB.db')
+   conn = create_connection(full_db_name)
+
+   if conn is None:
+        debug_print(app.logger, "Error! cannot create the database connection.")
+        return ("Error! cannot create the database connection.")
+
+   fld = fields.split(",")
+   fldString=""
+   insertString=""
+   for i in fld:
+      fldString += i + " TEXT,"
+      insertString +="?,"
+   issues_create_string = fldString[:-1]
+   insertString=insertString[:-1]
+
+   issues_table_name = query_name.strip()+"_ISSUES"
+   sql_create_tbl = "CREATE TABLE IF NOT EXISTS "+ issues_table_name +"("+issues_create_string+");"
+   create_table(conn,sql_create_tbl)
+   debug_print(app.logger,"Issues table created")
+   issueList = [(fld)]
+   maxResults=100
+   startAt = 0 
+   while True: 
+      # query next page 
+      url = server + "search?jql="+ jql +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&fields="+fields
+      debug_print(app.logger, "URL="+url)
+      result=execute_JIRA_RestAPI(url)
+      # process records 
+      for issue in result.issues:
+         # get all issues 
+         issueList += [(retrieveFields(issue,fields))]
+      
+      progress_made = str(1+round((startAt/(result.total+1)*95)))   # +1 incase 0
+      startAt += maxResults
+      if startAt > result.total:
+         break
+
+   createCSV(query_name,issueList)
+   progress_made = '100'
+   #try:
+   #   c = conn.cursor()
+   #   cmd = 'INSERT INTO '+issues_table_name+' VALUES ('+insertString+')'
+   #   c.executemany (cmd,issueList)
+   #   conn.commit()
+   #   conn.close()
+   #   debug_print (app.logger,'issues created successfully')
+   #except Error as e:
+   #   var = traceback.format_exc()
+   #   debug_print(app.logger, var)
+   #   return (var)
+
+   return render_template("FullIssueReport.html",
+         issue_fields   = fld,
+         issues         = issueList
+         )
+
 
 @app.route("/populateQuery/",methods = ['POST'])
 def populateQuery():

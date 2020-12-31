@@ -53,7 +53,11 @@
          <p> populate relevant field and press submit</p>
          <form  action="http://localhost:5000/hello/" method="POST" role="form" class="form-inline" >
                <input   type="text"    class = "mr-auto p-2" name="name" id="name" placeholder="Name" required>
-               <button  type="submit"  class = "btn-outline-primary p-2 w-25" value="submit">execute name</button>
+               <button  type="submit"  class = "btn-outline-primary p-2 w-25" value="submit">hello</button>
+         </form>           
+         <form  action="http://localhost:5000/backlogStat/" method="POST" role="form" class="form-inline" >
+            <input   type="text"    class = "mr-auto p-2" name="query_name" id="query_name" placeholder="Query Name" required>
+            <button  type="submit"  class = "btn-outline-primary p-2 w-25" value="submit">Backlog Stat Report</button>
          </form>           
          <form action="http://localhost:5000/BRCalc/" method="POST" role="form" class="form-inline">
                   <input type="text"      class = "mr-auto p-2"    name="jiraKey" id="jiraKey" placeholder="JIRA Key/s" required>
@@ -75,6 +79,13 @@
             <input type="text"  class = "p-2 " name="issue_types" id="issue_types" placeholder="Issue types Defect, Customer Defect etc." required>
             <button type="submit" class="btn-outline-primary ml-auto p-2 w-25" value="submit">Time In Status</button>
          </form>  
+         <form  action="http://localhost:5000/populateQueryByFields/" method="POST" role="form" class="form-inline" >
+            <input type="text"  class = "p-2 " name="query_name" id="query_name" placeholder="Query Name" required>
+            <input type="text"  class = "p-2 " name="jql" id="jql" placeholder="jql" required>
+            <input type="text"  class = "p-2 " name="fields" id="fields" placeholder="key,project,issuetype,created" required>
+            <button type="submit" class="btn-outline-primary ml-auto p-2 w-25" value="submit">Populate Query By Fileds</button>
+         </form>  
+
          <form  action="http://localhost:5000/ticketFieldHistory/" method="POST" role="form" class="form-inline" >
             <input type="text"   class = "p-2"  name="jirakey2" id="jirakey2" placeholder="JIRA Key" required>
             <input type="text"   class = "p-2"  list="field" name="field" required placeholder="Choose field or enter manually"/>
