@@ -7,7 +7,8 @@ import base64
 import sys
 import os
 import time
-from datetime import datetime
+import pathlib
+from datetime import datetime,date
 from shacoof.misc_utils import to_object, debug_print, createCSV
 from shacoof.SQLiteUtil import create_connection, create_table
 import logging
@@ -231,11 +232,12 @@ def backlogStat():
    progress_made = "1"   
    # customfield_58100 DTR 
    # customfield_60501 E2Es to complete BR
-   fields = 'key,project,issuetype,status,customfield_58100,customfield_60501'
-   issueList = [['filter']+fields.split(',')] # setting the head row
+   fields = 'project,key,issuetype,status,customfield_58100,customfield_60501'
+   issueList = [['filter','Date']+fields.split(',')] # setting the head row
    maxResults=1000
    jqls = [['WaitingCR','filter=141400'],['WaitingQaEnv','filter=141401'],['WaitingBR','filter=141406'],['preALP','filter=140006']]
    complete=0 #used to advance the bar
+   t = str(date.today())
    for jql in jqls:      
       startAt = 0       
       while True: 
@@ -245,8 +247,8 @@ def backlogStat():
          result=execute_JIRA_RestAPI(url)
          # process records 
          for issue in result.issues:
-            # get all issues 
-            issueList += [([jql[0]]+retrieveFields(issue,fields))]
+            # get all issues             
+            issueList += [([jql[0],t]+retrieveFields(issue,fields))]
          
          progress_made = str(complete+round((startAt/(result.total+1)*(100/len(jqls)))))   # +1 incase 0
          startAt += maxResults
@@ -254,11 +256,12 @@ def backlogStat():
             break
       complete +=24;
           
-
-   createCSV(query_name,issueList)
+   fileName = query_name+".csv" 
+   createCSV(fileName ,issueList)
    progress_made = '100'
 
-   return render_template("message.html",message=str(result.total) + " issues retrieved successfully")
+   p = str(pathlib.Path(__file__).parent.absolute()) + "\\" + fileName
+   return render_template("message.html",message=str(result.total) + " issues retrieved successfully",message2= p)
 
 
 @app.route("/populateQueryByFields/",methods = ['POST'])
