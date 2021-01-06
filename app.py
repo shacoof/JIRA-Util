@@ -143,8 +143,9 @@ def execute_JIRA_RestAPI(url):
    # return : object (from JIRA response)
    debug_print (app.logger,'start jira query'+ datetime.now().ctime() )
    # Base encode email and api token
-   #cred =  "Basic " + base64.b64encode(b'scohenofir:TigerXO123!').decode("utf-8") 
-   cred =  "Basic " +'c2NvaGVub2ZpcjpUaWdlclhPMTIzIQ=='
+   #cred =  "Basic " + base64.b64encode(b'scohenofir:TigerXO123!').decode("utf-8")
+   # #c2NvaGVub2ZpcjpUaWdlclhPMTIzIQ== 
+   cred =  "Basic " +'c2NvaGVub2ZpcjoxMjNUaWdlclhPIQ=='                     
    # used a service to convert string to base64 string is scohenofir:pwd
 
 
