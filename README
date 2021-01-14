@@ -2,6 +2,13 @@
 # f5 (run) from app.py
 # in the browser go to http://127.0.0.1:5000/mainForm/
 
+#runnin docker docker run --rm -d  -p 5000:5000/tcp jirautil:latest <
+# buildign docker - right click on the docker file
+# I had to add shacoof library to be under the roo directory of jira-util
+# docker cp 2e447781ebe0:/app/21-01-14.csv c:\temp
+
+
+
 # docker rm $(docker ps -a -q -f status=exited)     # remove all containers
 # docker container prune                            # remove all contrainers 
 # docker pull                                       # brings image
@@ -28,3 +35,5 @@ eb init -p docker yoramhw
 eb create yoramhw 
 #http://localhost:5000/hello/xx
 docker run -p 5000:5000 shacoof/yhw
+
+docker build --pull --rm -f "Dockerfile" -t jirautil:latest "." <

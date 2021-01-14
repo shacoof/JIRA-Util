@@ -171,8 +171,6 @@ def execute_JIRA_RestAPI(url):
    debug_print (app.logger,'end jira query'+ datetime.now().ctime())
    return obj
 
-
-
 logging.basicConfig(filename='app.log', level=logging.DEBUG,filemode='w')
 logging.getLogger("myLogger")
 app = Flask(__name__)
@@ -218,7 +216,6 @@ def validate():
    
    return jsonify(result='Bad')
 
-
 @app.route("/backlogStat/",methods = ['POST'])
 def backlogStat():
    global progress_made      
@@ -237,7 +234,8 @@ def backlogStat():
    issueList = [['filter','Date']+fields.split(',')] # setting the head row
    maxResults=1000
    jqls = [['WaitingCR','filter=141400'],['WaitingQaEnv','filter=141401'],['WaitingBR','filter=141406'],['preALP','filter=140006']]
-   complete=0 #used to advance the bar
+   complete=1 #used to advance the bar
+   totalRowsSelected = 0
    t = str(date.today())
    for jql in jqls:      
       startAt = 0       
@@ -246,24 +244,26 @@ def backlogStat():
          url = server + "search?jql="+ jql[1] +"&startAt="+str(startAt)+"&maxResults="+str(maxResults) +"&fields="+fields
          debug_print(app.logger, "URL="+url)
          result=execute_JIRA_RestAPI(url)
+         complete +=30;
+         progress_made = str(complete+round((startAt/(result.total+1)*(100/len(jqls)))))   # +1 incase 0
+         totalRowsSelected += result.total
          # process records 
          for issue in result.issues:
             # get all issues             
             issueList += [([jql[0],t]+retrieveFields(issue,fields))]
          
-         progress_made = str(complete+round((startAt/(result.total+1)*(100/len(jqls)))))   # +1 incase 0
+         
          startAt += maxResults
          if startAt > result.total:
             break
-      complete +=24;
+      
           
    fileName = query_name+".csv" 
    createCSV(fileName ,issueList)
    progress_made = '100'
 
    p = str(pathlib.Path(__file__).parent.absolute()) + "\\" + fileName
-   return render_template("message.html",message=str(result.total) + " issues retrieved successfully",message2= p)
-
+   return render_template("message.html",message=str(totalRowsSelected) + " issues retrieved successfully",message2= p)
 
 @app.route("/populateQueryByFields/",methods = ['POST'])
 def populateQueryByFields():
@@ -342,7 +342,6 @@ def populateQueryByFields():
          issue_fields   = fld,
          issues         = issueList
          )
-
 
 @app.route("/populateQuery/",methods = ['POST'])
 def populateQuery():

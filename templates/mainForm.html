@@ -44,10 +44,11 @@
          });
       });
    </script>
+      <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+      
 
    </head>  
    <body>
-      
       <div class="container">
          <h1> Jira utilities</h1>
          <p> populate relevant field and press submit</p>
@@ -104,6 +105,8 @@
                   <span class="progress-bar-label">0%</span>
                </div>
             </div>
+            <img src="{{ url_for('static', filename='s.webp') }}" alt="WebP rules." width="32" height="32" />
+
       <script type=text/javascript src="{{url_for('static', filename='jquery.js') }}"></script>
    </body>   
 </html>
