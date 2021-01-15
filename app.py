@@ -23,6 +23,10 @@ issue_db = []
 progress_made = "0"
 JIRA_DB = 'JIRA-DB.db'
 
+logging.basicConfig(filename='app.log', level=logging.DEBUG,filemode='w')
+logging.getLogger("myLogger")
+app = Flask(__name__)
+debug_print(app.logger,"Good morning sharon")
 
 def retrieveFields(obj, fields): 
   f = fields.split(",");
@@ -116,6 +120,10 @@ def get_issue_links(issue,filter_by, name):
    # output : list of links of type link_name
    global issue_db
    result = []
+   link_type = '' 
+   issue_type = ''
+   status=''
+   key=''
    for link in issue.fields.issuelinks:
       
       if hasattr(link, "outwardIssue"):
@@ -170,11 +178,6 @@ def execute_JIRA_RestAPI(url):
    obj = to_object(json_str)
    debug_print (app.logger,'end jira query'+ datetime.now().ctime())
    return obj
-
-logging.basicConfig(filename='app.log', level=logging.DEBUG,filemode='w')
-logging.getLogger("myLogger")
-app = Flask(__name__)
-debug_print(app.logger,"Good morning sharon")
 
 @app.route('/progress')
 def progress():
@@ -433,6 +436,7 @@ def populateQuery():
       debug_print(app.logger, "URL="+url)
       result=execute_JIRA_RestAPI(url)
       # process records 
+      start_status_datetime = datetime.today()
       for issue in result.issues:
          # get all issues 
          issueList += [(issue.key, issue.fields.project.name, issue.fields.issuetype.name, issue.fields.created[0:10])]
@@ -501,6 +505,7 @@ def BRCalc():
    #   Step 2 : find these E2Es FAs
    #   Step 3 : find all E2Es (E1) that cover these FAs
    #   Step 4 : (recursively) find all E2Es (E2) that E1 are dependent on 
+   blast_radius = []
    try:
       global progress_made      
       progress_made = "0"
@@ -585,10 +590,10 @@ def queryMySQL():
 
 @app.route('/ticketFieldHistory/',methods = ['POST'])
 def ticketFieldHistory():
+   historyList = []      
    try:
       global progress_made
       progress_made = "0"
-      historyList = []      
       #get the main jira ticket/s
       jiraKey2 = request.form['jirakey2']   
       field_name = request.form['field']   
@@ -616,8 +621,8 @@ def timeInStatus():
    global progress_made      
    progress_made = "0"   
    #get user parameters 
+   project_keys = []
    try:
-      project_keys = []
       project_keys.append(request.form['project_key'])
       from_date = request.form['from_date']
       Issue_types = request.form['issue_types']
@@ -640,13 +645,13 @@ def timeInStatus():
         return ("Error! cannot create the database connection.")
 
    time_in_status_table_name = "TIME_IN_STATUS"
-
    time_in_status_create_string = """  (PROJECT	TEXT,
                                         ISSUE_TYPE	TEXT,
                                         KEY	TEXT,
                                         STATUS TEXT,
-                                        FROM_STATUS	TEXT,
-                                        TO_STATUS	TEXT,
+                                        CHANGED_FIELD TEXT,
+                                        FROM_VAL	TEXT,
+                                        TO_VAL	TEXT,
                                         CREATED TEXT
                                     );"""
 
@@ -654,15 +659,20 @@ def timeInStatus():
    create_table(sqlLiteConn,sql_create_tbl)
    debug_print(app.logger,"Time in status table created")
 
-   progress_made_int = 4
-   progress_made = str(progress_made_int)
-
+   progress_made_n = 4.0
+   progress_made = str(progress_made_n)
+   keysQuery = False
    sqlLiteCursor = sqlLiteConn.cursor()
 
+   issue_keys=[]
    #if ALL then bring all in model products, I have pre-uploaded them using CSV import
    if project_keys[0] == "ALL":
       sqlLiteCursor.execute("SELECT * FROM IN_MODEL_PRODUCTS")
       project_keys = sqlLiteCursor.fetchall()
+   elif project_keys[0] == "KEYS":
+      keysQuery = True
+      sqlLiteCursor.execute("SELECT * FROM JIRA_KEYS")
+      issue_keys = sqlLiteCursor.fetchall()
 
    # Open MySql and execute query
    mydb = mysql.connector.connect(
@@ -672,52 +682,94 @@ def timeInStatus():
       database='jira'   )
    mycursor = mydb.cursor()
 
-   for project_key in project_keys :
-      progress_made_int += 90/len(project_keys)
-      progress_made += str(round(progress_made_int))
-      debug_print(app.logger, 'Processing product ' + project_key[0])
-      #delete old history for this project 
-      try:
-         sql_cmd = "Delete from " + time_in_status_table_name + " where project = '" + project_key[0] +"'"
-         sqlLiteCursor.execute (sql_cmd)
-         debug_print (app.logger,'Old issues deleted successfully')
-      except Error as e:
-         var = traceback.format_exc()
-         debug_print(app.logger, var)
-         return (var)
-      
-      query_string = """select  project.pkey,
-            issuetype.pname,
-            concat(project.pkey,'-', jiraissue.issuenum),
-            issuestatus.pname,
-            changeitem.OLDSTRING OldStatus, 
-            changeitem.NEWSTRING NewStatus, 
-            changegroup.CREATED Executed
-            from changeitem 
-            inner join changegroup  on changeitem.groupid = changegroup.id
-            inner join jiraissue  on jiraissue.id = changegroup.issueid
-            inner join project on project.id = jiraissue.project
-            inner join issuetype  ON issuetype.id = jiraissue.issuetype
-            inner join issuestatus on issuestatus.id = jiraissue.issuestatus 
-            where changeitem.field ='status'
-            and ( issuetype.pname = 'Defect' or issuetype.pname = 'Customer Defect' )
-            and jiraissue.CREATED > '""" + from_date + """'
-            and project.pkey = '""" + project_key[0] + """'
-            Order by project.pkey, jiraissue.issuenum, changegroup.CREATED
-         """
+   try:
+      sql_cmd = "Delete from " + time_in_status_table_name # + " where project = '" + project_key[0] +"'"
+      sqlLiteCursor.execute (sql_cmd)
+      debug_print (app.logger,'Old issues deleted successfully')
+   except Error as e:
+      var = traceback.format_exc()
+      debug_print(app.logger, var)
+      return (var)
 
-      try:
-         #debug_print (app.logger, query_string)
-         mycursor.execute(query_string)
-         records = mycursor.fetchall()         
-         # [0] project [1] issue type [2] key [3] status  [4] from status [5] to status  [6] created
-         sqlLiteCursor.executemany  ('INSERT INTO '+time_in_status_table_name+' VALUES (?,?,?,?,?,?,?)'    ,records)
-         sqlLiteConn.commit()
-         debug_print (app.logger,str(len(records))+' records created successfully')
-      except Error as e:
-         var = traceback.format_exc()
-         debug_print(app.logger, var)
-         return (var)
+   sqlKeys = '';
+   if (keysQuery==True):
+      for key in issue_keys:
+         ProjectKey  = key[0][0:key[0].find("-")]
+         IssueKey     = key[0][key[0].find("-")+1:]
+         query_string = """select  project.pkey,
+                              issuetype.pname,
+                              concat(project.pkey,'-', jiraissue.issuenum),
+                              issuestatus.pname,
+                              changeitem.field,
+                              changeitem.OLDSTRING OldStatus, 
+                              changeitem.NEWSTRING NewStatus, 
+                              changegroup.CREATED Executed
+                           from changeitem 
+                              inner join changegroup  on changeitem.groupid = changegroup.id
+                              inner join jiraissue  on jiraissue.id = changegroup.issueid
+                              inner join project on project.id = jiraissue.project
+                              inner join issuetype  ON issuetype.id = jiraissue.issuetype
+                              inner join issuestatus on issuestatus.id = jiraissue.issuestatus 
+                           where project.pkey =  '""" + ProjectKey + """'
+                           and jiraissue.issuenum =  '""" + IssueKey  + """'
+                           and ( 
+                              changeitem.field = "DistanceToRelease"  
+                              or
+                              changeitem.field ='status')
+                              """      
+         try:
+            #debug_print (app.logger, query_string)
+            mycursor.execute(query_string)
+            records = mycursor.fetchall()         
+            # [0] project [1] issue type [2] key [3] status [4] chagned_item [5] from status [6] to status  [7] created
+            sqlLiteCursor.executemany  ('INSERT INTO '+time_in_status_table_name+' VALUES (?,?,?,?,?,?,?,?)'    ,records)
+            sqlLiteConn.commit()
+            progress_made_n += 90/len(issue_keys)
+            progress_made = str(progress_made_n)
+         except Error as e:
+            var = traceback.format_exc()
+            debug_print(app.logger, var)
+            return (var)
+   else :
+      for project_key in project_keys :
+         progress_made_int += 90/len(project_keys)
+         progress_made += str(round(progress_made_int))
+         debug_print(app.logger, 'Processing product ' + project_key[0])
+         #delete old history for this project 
+         
+         query_string = """select  project.pkey,
+               issuetype.pname,
+               concat(project.pkey,'-', jiraissue.issuenum),
+               issuestatus.pname,
+               changeitem.field,
+               changeitem.OLDSTRING OldStatus, 
+               changeitem.NEWSTRING NewStatus, 
+               changegroup.CREATED Executed
+               from changeitem 
+               inner join changegroup  on changeitem.groupid = changegroup.id
+               inner join jiraissue  on jiraissue.id = changegroup.issueid
+               inner join project on project.id = jiraissue.project
+               inner join issuetype  ON issuetype.id = jiraissue.issuetype
+               inner join issuestatus on issuestatus.id = jiraissue.issuestatus 
+               where changeitem.field ='status'
+               and ( issuetype.pname = 'Defect' or issuetype.pname = 'Customer Defect' )
+               and jiraissue.CREATED > '""" + from_date + """'
+               and project.pkey = '""" + project_key[0] + """'
+               Order by project.pkey, jiraissue.issuenum, changegroup.CREATED
+            """
+
+         try:
+            #debug_print (app.logger, query_string)
+            mycursor.execute(query_string)
+            records = mycursor.fetchall()         
+            # [0] project [1] issue type [2] key [3] status  [4] from status [5] to status  [6] created
+            sqlLiteCursor.executemany  ('INSERT INTO '+time_in_status_table_name+' VALUES (?,?,?,?,?,?,?,?)'    ,records)
+            sqlLiteConn.commit()
+            debug_print (app.logger,str(len(records))+' records created successfully')
+         except Error as e:
+            var = traceback.format_exc()
+            debug_print(app.logger, var)
+            return (var)
 
    sqlLiteConn.close()
    progress_made_int = 100

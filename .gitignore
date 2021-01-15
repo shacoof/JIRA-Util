@@ -20,3 +20,5 @@ __pycache__/*.*
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode
 __pycache__/app.cpython-37.pyc
+*.csv
+*.db
